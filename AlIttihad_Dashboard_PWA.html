@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0D1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ittihad EC">
+<title>⚽ Al-Ittihad E-Commerce</title>
+<link rel="manifest" id="manifest-ph">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#161b22}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+button,input,textarea{font-family:inherit}
+table{border-collapse:collapse;width:100%}
+.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%);background:#2ecc71;color:#0d1117;padding:9px 20px;border-radius:20px;font-size:12px;font-weight:700;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.install-btn{position:fixed;bottom:20px;right:20px;background:#C8A84B;color:#0d1117;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:800;cursor:pointer;z-index:800;box-shadow:0 4px 20px #C8A84B44;display:none}
+.install-btn.show{display:block}
+@media(max-width:640px){.hide-sm{display:none!important}.tabs-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="toast" id="toast"></div>
+<button class="install-btn" id="install-btn" onclick="installApp()">📲 Install App</button>
+<script>
+// ── PWA SW
+const SW=`self.addEventListener('install',e=>{e.waitUntil(caches.open('ittihad-v2').then(c=>c.addAll([location.pathname])));self.skipWaiting()});self.addEventListener('activate',e=>e.waitUntil(clients.claim()));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match(location.pathname)))));`;
+if('serviceWorker'in navigator){const b=new Blob([SW],{type:'application/javascript'});navigator.serviceWorker.register(URL.createObjectURL(b)).catch(()=>{})}
+const mf={name:"Al-Ittihad E-Commerce",short_name:"Ittihad EC",start_url:location.pathname,display:"standalone",background_color:"#0D1117",theme_color:"#C8A84B",orientation:"any",icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230D1117' rx='18'/><text y='.9em' font-size='75' x='12'>⚽</text></svg>",sizes:"any",type:"image/svg+xml",purpose:"any maskable"}]};
+document.getElementById('manifest-ph').href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:'application/manifest+json'}));
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-btn').classList.add('show')});
+function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('install-btn').classList.remove('show')})}}
+window.addEventListener('appinstalled',()=>{document.getElementById('install-btn').classList.remove('show');showToast('✅ App installed!')});
+function showToast(msg,color='#2ecc71'){const t=document.getElementById('toast');t.textContent=msg;t.style.background=color;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+const S={get:(k,d=null)=>{try{const v=localStorage.getItem('ittihad_'+k);return v?JSON.parse(v):d}catch{return d}},set:(k,v)=>{try{localStorage.setItem('ittihad_'+k,JSON.stringify(v));return true}catch{return false}}};
+function exportData(){const d={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('ittihad_'))d[k]=localStorage.getItem(k)}const b=new Blob([JSON.stringify({exported:new Date().toISOString(),data:d},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`ittihad_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();showToast('✅ Backup exported!')}
+function importData(file){if(!file)return;const r=new FileReader();r.onload=e=>{try{const{data}=JSON.parse(e.target.result);Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,v));showToast('✅ Imported! Reloading...');setTimeout(()=>location.reload(),1000)}catch{showToast('❌ Invalid file','#e74c3c')}};r.readAsText(file)}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script type="text/babel">
+const{useState,useEffect,useCallback,useRef}=React;
+const G={gold:"#C8A84B",navy:"#0d1117",card:"#161b22",row:"#21262d",green:"#2ecc71",red:"#e74c3c",blue:"#3498db",orange:"#f97316",purple:"#a78bfa",border:"#21262d",muted:"#8b949e",dim:"#555",teal:"#0bbfbf"};
+
+// PIP dates
+const PIP_START = new Date("2026-04-27T00:00:00");
+const PIP_END   = new Date("2026-07-25T23:59:59");
+const PIP_TOTAL = 90;
+
+const T={
+  en:{tabs:["⏱ PIP","📊 Overview","💰 Sales","📣 Marketing","🔴 Returns","⚠️ Issues","🎯 Strategy","➕ Add Data"],tabKeys:["pip","overview","sales","marketing","returns","issues","strategy","adddata"],revenue:"Revenue",orders:"Orders",cvr:"CVR",sessions:"Sessions",returns:"Returns",newCust:"New Customers",spend:"Ad Spend",roas:"ROAS",target:"Target",actual:"Actual",close:"✕",upcoming:"Upcoming",wk:"Wk",by:"Feras Shata · E-Commerce Manager · PIF",save:"Save",saved:"✓ Saved",export:"Export Backup",importBtn:"Import",weekAdded:"Week added ✓",noData:"No data yet",enter_rev:"Revenue SAR",enter_ord:"Orders",enter_cvr:"CVR %",enter_retSAR:"Returns SAR",enter_retRate:"Return Rate %",enter_sess:"Sessions",enter_nc:"New Customers",enter_note:"Notes / ملاحظات"},
+  ar:{tabs:["⏱ الـ PIP","📊 نظرة عامة","💰 المبيعات","📣 التسويق","🔴 مرتجعات","⚠️ مشاكل","🎯 الاستراتيجية","➕ إضافة"],tabKeys:["pip","overview","sales","marketing","returns","issues","strategy","adddata"],revenue:"الإيراد",orders:"الطلبات",cvr:"معدل التحويل",sessions:"الجلسات",returns:"المرتجعات",newCust:"عملاء جدد",spend:"إنفاق إعلانات",roas:"ROAS",target:"الهدف",actual:"الفعلي",close:"✕",upcoming:"قادم",wk:"أسبوع",by:"فراس شطا · مدير التجارة الإلكترونية · PIF",save:"حفظ",saved:"✓ محفوظ",export:"تصدير نسخة",importBtn:"استيراد",weekAdded:"تم الحفظ ✓",noData:"لا توجد بيانات",enter_rev:"الإيراد SAR",enter_ord:"الطلبات",enter_cvr:"CVR %",enter_retSAR:"المرتجعات SAR",enter_retRate:"نسبة الإرجاع %",enter_sess:"الجلسات",enter_nc:"عملاء جدد",enter_note:"ملاحظات / Notes"},
+};
+
+const M25=[
+  {m:"Apr",ar:"أبريل", rev:1447,   orders:7,    cvr:0.72,retRate:0,   retSAR:0,    sess:839,   nc:0  },
+  {m:"May",ar:"مايو",  rev:210750, orders:443,  cvr:0.69,retRate:2.1, retSAR:136,  sess:97609, nc:110},
+  {m:"Jun",ar:"يونيو", rev:-31248, orders:111,  cvr:0.35,retRate:72,  retSAR:56947,sess:34863, nc:10 },
+  {m:"Jul",ar:"يوليو", rev:466606, orders:1071, cvr:1.34,retRate:11,  retSAR:29275,sess:78930, nc:10 },
+  {m:"Aug",ar:"أغسطس",rev:300353, orders:754,  cvr:0.69,retRate:9,   retSAR:31888,sess:122638,nc:5  },
+  {m:"Sep",ar:"سبتمبر",rev:636723, orders:1961, cvr:1.66,retRate:3,   retSAR:21739,sess:99118, nc:4  },
+  {m:"Oct",ar:"أكتوبر",rev:371144, orders:1194, cvr:0.83,retRate:6,   retSAR:12241,sess:142626,nc:10 },
+  {m:"Nov",ar:"نوفمبر",rev:184832, orders:874,  cvr:0.83,retRate:12,  retSAR:30090,sess:94648, nc:12 },
+  {m:"Dec",ar:"ديسمبر",rev:199617, orders:842,  cvr:0.38,retRate:23,  retSAR:20505,sess:218205,nc:34 },
+];
+const M26_BASE=[
+  {m:"Jan",ar:"يناير", rev:98930,  orders:362, cvr:0.43,retRate:8.38,retSAR:12000,sess:82539, nc:287,locked:true},
+  {m:"Feb",ar:"فبراير",rev:456789, orders:1180,cvr:0.54,retRate:3.96,retSAR:4875, sess:215740,nc:898,locked:true},
+  {m:"Mar",ar:"مارس",  rev:194032, orders:566, cvr:1.18,retRate:8.37,retSAR:8367, sess:50608, nc:478,locked:true},
+  {m:"Apr",ar:"أبريل", rev:181551, orders:712, cvr:1.95,retRate:1.38,retSAR:1882, sess:35191, nc:521,locked:true},
+  {m:"May",ar:"مايو",  rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+  {m:"Jun",ar:"يونيو", rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+  {m:"Jul",ar:"يوليو", rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+  {m:"Aug",ar:"أغسطس",rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+  {m:"Sep",ar:"سبتمبر",rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+  {m:"Oct",ar:"أكتوبر",rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+  {m:"Nov",ar:"نوفمبر",rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+  {m:"Dec",ar:"ديسمبر",rev:null,orders:null,cvr:null,retRate:null,retSAR:null,sess:null,nc:null},
+];
+const WKS={
+  Apr25:[{w:"28 Apr",rev:1447,orders:7,aov:165,cvr:0.72,sess:839,retSAR:0,nc:0}],
+  May25:[{w:"05 May",rev:1214,orders:3,aov:352,cvr:1.38,sess:217,retSAR:0,nc:0},{w:"12 May",rev:104,orders:1,aov:226,cvr:0.52,sess:191,retSAR:136,nc:0},{w:"19 May",rev:166002,orders:344,aov:416,cvr:0.46,sess:74518,retSAR:0,nc:93,flag:"🔥"},{w:"26 May",rev:43430,orders:95,aov:395,cvr:0.41,sess:22683,retSAR:0,nc:17}],
+  Jun25:[{w:"02 Jun",rev:1230,orders:26,aov:293,cvr:0.35,sess:7516,retSAR:6657,nc:7},{w:"09 Jun",rev:-16799,orders:10,aov:162,cvr:0.21,sess:4879,retSAR:16303,nc:1,flag:"⚠️"},{w:"16 Jun",rev:-4329,orders:29,aov:291,cvr:0.23,sess:13168,retSAR:12223,nc:2,flag:"⚠️"},{w:"23 Jun",rev:-10564,orders:30,aov:261,cvr:0.54,sess:5337,retSAR:16119,nc:0,flag:"⚠️"},{w:"30 Jun",rev:-785,orders:16,aov:316,cvr:0.40,sess:3963,retSAR:5546,nc:0}],
+  Jul25:[{w:"07 Jul",rev:9778,orders:61,aov:228,cvr:1.48,sess:4042,retSAR:4683,nc:0},{w:"14 Jul",rev:150547,orders:318,aov:470,cvr:1.34,sess:23602,retSAR:4758,nc:4},{w:"21 Jul",rev:182906,orders:395,aov:457,cvr:1.35,sess:28712,retSAR:7194,nc:1},{w:"28 Jul",rev:123375,orders:297,aov:409,cvr:1.30,sess:22574,retSAR:12639,nc:5}],
+  Aug25:[{w:"04 Aug",rev:45483,orders:139,aov:382,cvr:1.14,sess:11797,retSAR:13611,nc:1},{w:"11 Aug",rev:89162,orders:207,aov:423,cvr:0.56,sess:36572,retSAR:7773,nc:4},{w:"18 Aug",rev:69567,orders:178,aov:402,cvr:0.47,sess:37819,retSAR:9643,nc:0},{w:"25 Aug",rev:96141,orders:230,aov:377,cvr:0.60,sess:37250,retSAR:861,nc:0}],
+  Sep25:[{w:"01 Sep",rev:106380,orders:368,aov:262,cvr:1.24,sess:29353,retSAR:2369,nc:1},{w:"08 Sep",rev:117595,orders:214,aov:508,cvr:0.87,sess:24307,retSAR:3219,nc:1},{w:"15 Sep",rev:200411,orders:600,aov:304,cvr:2.11,sess:28212,retSAR:14819,nc:1,flag:"🔝"},{w:"22 Sep",rev:137678,orders:519,aov:228,cvr:1.98,sess:25482,retSAR:1275,nc:1},{w:"29 Sep",rev:74659,orders:260,aov:260,cvr:2.08,sess:12064,retSAR:3257,nc:0}],
+  Oct25:[{w:"06 Oct",rev:113941,orders:303,aov:345,cvr:0.99,sess:29572,retSAR:6375,nc:3},{w:"13 Oct",rev:53392,orders:149,aov:321,cvr:0.80,sess:15679,retSAR:1518,nc:1},{w:"20 Oct",rev:75170,orders:304,aov:215,cvr:0.79,sess:38449,retSAR:2431,nc:3},{w:"27 Oct",rev:128641,orders:438,aov:257,cvr:0.72,sess:58926,retSAR:1917,nc:3}],
+  Nov25:[{w:"03 Nov",rev:85574,orders:436,aov:183,cvr:1.09,sess:39364,retSAR:9038,nc:3},{w:"10 Nov",rev:35172,orders:156,aov:225,cvr:0.89,sess:16742,retSAR:5340,nc:1},{w:"17 Nov",rev:28251,orders:119,aov:280,cvr:0.64,sess:18220,retSAR:8797,nc:3},{w:"24 Nov",rev:35836,orders:163,aov:238,cvr:0.79,sess:20322,retSAR:7916,nc:5}],
+  Dec25:[{w:"01 Dec",rev:52950,orders:271,aov:182,cvr:0.46,sess:56783,retSAR:4705,nc:34},{w:"08 Dec",rev:33140,orders:140,aov:219,cvr:0.16,sess:89045,retSAR:1735,nc:0,flag:"⚠️"},{w:"15 Dec",rev:58347,orders:215,aov:269,cvr:0.62,sess:33798,retSAR:8085,nc:0},{w:"22 Dec",rev:22037,orders:91,aov:261,cvr:0.32,sess:28570,retSAR:4559,nc:0},{w:"29 Dec",rev:33143,orders:125,aov:254,cvr:0.59,sess:10009,retSAR:1420,nc:0}],
+  Jan26:[{w:"29 Dec*",rev:18704,orders:66,aov:271,cvr:0.67,sess:9370,retSAR:1490,nc:51},{w:"05 Jan",rev:24332,orders:96,aov:254,cvr:0.41,sess:23072,retSAR:3763,nc:74},{w:"12 Jan",rev:23530,orders:80,aov:269,cvr:0.41,sess:19412,retSAR:1258,nc:70},{w:"19 Jan",rev:12489,orders:52,aov:245,cvr:0.26,sess:19813,retSAR:2152,nc:38},{w:"26 Jan",rev:19875,orders:68,aov:278,cvr:0.62,sess:10872,retSAR:3337,nc:54}],
+  Feb26:[{w:"02 Feb",rev:39414,orders:150,aov:243,cvr:0.56,sess:25998,retSAR:2012,nc:111},{w:"09 Feb",rev:49155,orders:197,aov:221,cvr:0.38,sess:51610,retSAR:651,nc:165},{w:"16 Feb",rev:229585,orders:557,aov:359,cvr:0.60,sess:90746,retSAR:1169,nc:401,flag:"🔥"},{w:"23 Feb",rev:138634,orders:276,aov:441,cvr:0.57,sess:47386,retSAR:1042,nc:221}],
+  Mar26:[{w:"02 Mar",rev:77803,orders:196,aov:361,cvr:0.88,sess:22045,retSAR:2699,nc:155},{w:"09 Mar",rev:36760,orders:119,aov:295,cvr:1.25,sess:9548,retSAR:2759,nc:99},{w:"16 Mar",rev:41904,orders:113,aov:326,cvr:1.13,sess:9446,retSAR:224,nc:82},{w:"23 Mar",rev:32368,orders:112,aov:264,cvr:2.17,sess:5059,retSAR:1501,nc:89,flag:"✅"},{w:"30 Mar",rev:5197,orders:26,aov:219,cvr:1.49,sess:4510,retSAR:1183,nc:53,flag:"⚠️"}],
+  Apr26:[{w:"06 Apr",rev:9160,orders:35,aov:252,cvr:0.77,sess:4686,retSAR:870,nc:27},{w:"13 Apr",rev:160263,orders:615,aov:229,cvr:2.22,sess:26554,retSAR:384,nc:451,flag:"🔥"},{w:"20 Apr",rev:12128,orders:62,aov:179,cvr:1.54,sess:3951,retSAR:628,nc:43}],
+};
+const PAID=[
+  {m:"Aug 25",ar:"أغسطس 25",spend:32942,value:148954,roas:4.52,cvr:0.79,purchases:331,imp:3177283},
+  {m:"Sep 25",ar:"سبتمبر 25",spend:39669,value:220182,roas:5.55,cvr:1.27,purchases:721,imp:2992479},
+  {m:"Oct 25",ar:"أكتوبر 25",spend:31288,value:131538,roas:4.20,cvr:0.89,purchases:467,imp:3574030},
+  {m:"Nov 25",ar:"نوفمبر 25",spend:31229,value:167239,roas:5.36,cvr:0.68,purchases:603,imp:5830360},
+  {m:"Dec 25",ar:"ديسمبر 25",spend:51337,value:158666,roas:3.09,cvr:1.16,purchases:388,imp:3415476},
+  {m:"Jan 26",ar:"يناير 26", spend:48136,value:90203, roas:1.87,cvr:0.75,purchases:299,imp:4491266},
+  {m:"Feb 26",ar:"فبراير 26",spend:19877,value:67288, roas:3.39,cvr:1.66,purchases:272,imp:1823250},
+];
+const PIP_TARGETS=[
+  {k:"rev",  en:"+40% Revenue",      ar:"+40% نمو الإيرادات",   curr:"SAR 2.34M",goal:"SAR 3.28M",baseVal:2340225,goalVal:3280000,unit:"SAR",trend:"up"},
+  {k:"cvr",  en:"CVR > 1.5%",        ar:"CVR > 1.5%",           curr:"0.76%",    goal:"1.5%",     baseVal:0.76,   goalVal:1.5,    unit:"%",trend:"up"},
+  {k:"mkt",  en:"Marketplace > 20%", ar:"ماركت بليس > 20%",    curr:"10.2%",    goal:"20%",      baseVal:10.2,   goalVal:20,     unit:"%",trend:"flat"},
+  {k:"roas", en:"ROAS ≥ 6.11x",      ar:"ROAS ≥ 6.11x",         curr:"1.87x",    goal:"6.11x",    baseVal:1.87,   goalVal:6.11,   unit:"x",trend:"down"},
+  {k:"ret",  en:"Cancellations < 3%",ar:"إلغاءات < 3%",         curr:"~8%",      goal:"<3%",      baseVal:8,      goalVal:3,      unit:"%",trend:"flat"},
+];
+const ISSUES=[
+  {p:"P1",icon:"🔴",c:G.red,en:"CVR 0.76% vs 1.5% target — 89K sessions Dec 25 with only 138 checkouts",ar:"CVR 0.76% مقابل هدف 1.5%",act_en:"Fix checkout + trust signals + product page speed",act_ar:"إصلاح تدفق الشراء + مؤشرات الثقة + سرعة"},
+  {p:"P1",icon:"🔴",c:G.red,en:"SAR 260K returns (2025–2026) — Jun 25 negative revenue, Dec 8: 92.8%",ar:"SAR 260K مرتجعات — يونيو سلبي، ديسمبر 8: 92.8%",act_en:"Exchange policy + size chart + barcode at packing",act_ar:"سياسة استبدال + جدول مقاسات + باركود"},
+  {p:"P1",icon:"🔴",c:G.red,en:"Amazon not launched — marketplace share at 10.2% vs 20% target",ar:"Amazon لم يُطلق — حصة الماركت بليس 10.2%",act_en:"Launch Amazon + hire marketplace specialist",act_ar:"إطلاق Amazon + تعيين موظف متخصص"},
+  {p:"P2",icon:"🟡",c:G.orange,en:"ROAS fell from 5.55x (Sep 25) to 1.87x (Jan 26)",ar:"ROAS انخفض من 5.55x لـ 1.87x",act_en:"Restructure campaigns around match calendar",act_ar:"إعادة هيكلة الحملات حول تقويم المباريات"},
+  {p:"P2",icon:"🟡",c:G.orange,en:"No IT integrations approved — all 4 requests rejected",ar:"لا تكاملات IT معتمدة — 4 طلبات مرفوضة",act_en:"Resubmit with ROI attached",act_ar:"إعادة التقديم مع ROI"},
+  {p:"P2",icon:"🟡",c:G.orange,en:"60+ dead SKUs hurting catalog and CVR",ar:"60+ SKU ميتة تضر بالكتالوج والـ CVR",act_en:"Audit and remove dead SKUs immediately",act_ar:"مراجعة وإزالة الـ SKUs الميتة فوراً"},
+];
+const STRATEGY=[
+  {phase:"Phase 1",period_en:"Weeks 1–4",period_ar:"الأسابيع 1–4",color:G.blue,items:[
+    {en:"CVR: Checkout audit + trust signals + speed",ar:"CVR: أوديت checkout + مؤشرات ثقة + سرعة"},
+    {en:"Returns: Exchange policy + root cause analysis",ar:"مرتجعات: سياسة استبدال + تحليل السبب"},
+    {en:"SKU audit: Remove 60+ dead SKUs everywhere",ar:"أوديت SKU: إزالة 60+ SKU ميتة"},
+    {en:"Amazon: Setup + list top 20 SKUs",ar:"Amazon: إعداد + إدراج أفضل 20 SKU"},
+    {en:"Match calendar: Map 2026 fixtures to campaigns",ar:"تقويم المباريات: ربط الجدول بالحملات"},
+  ]},
+  {phase:"Phase 2",period_en:"Weeks 5–8",period_ar:"الأسابيع 5–8",color:G.gold,items:[
+    {en:"Paid media: Restructure around match peaks",ar:"Paid media: إعادة هيكلة حول ذروات المباريات"},
+    {en:"Email/WhatsApp: Retention campaigns",ar:"Email/WhatsApp: حملات استبقاء"},
+    {en:"Marketplace specialist: Hire for Noon+Trendyol+Amazon",ar:"موظف ماركت بليس: توظيف لـ 3 منصات"},
+    {en:"Content: Min 3 images per product",ar:"محتوى: 3 صور كحد أدنى لكل منتج"},
+    {en:"IT: Resubmit 3 integrations with ROI",ar:"IT: إعادة تقديم 3 تكاملات مع ROI"},
+  ]},
+  {phase:"Phase 3",period_en:"Weeks 9–12",period_ar:"الأسابيع 9–12",color:G.green,items:[
+    {en:"A/B test: 2 checkout flow variations",ar:"اختبار A/B: نسختين من تدفق الشراء"},
+    {en:"Women/Kids: Launch 5+5 SKUs",ar:"نساء/أطفال: إطلاق 5+5 SKUs"},
+    {en:"Salla migration: Cost comparison for leadership",ar:"نقل سلة: مقارنة تكلفة للإدارة"},
+    {en:"PIP presentation: Full 90-day results",ar:"عرض PIP: نتائج الـ90 يوم كاملة"},
+    {en:"2027 budget: Propose marketing + headcount",ar:"ميزانية 2027: اقتراح خطة التسويق"},
+  ]},
+];
+const RET_REASONS=[
+  {r:"Too Small",ar:"مقاس صغير",qty:107,sar:26973},
+  {r:"Too Big",ar:"مقاس كبير",qty:97,sar:27333},
+  {r:"Other",ar:"سبب آخر",qty:96,sar:19333},
+  {r:"Damaged",ar:"تالف/معيب",qty:29,sar:3621},
+  {r:"Wrong Item",ar:"منتج خاطئ",qty:25,sar:5632},
+  {r:"Unknown",ar:"غير محدد",qty:21,sar:5531},
+  {r:"Not as Described",ar:"لا يطابق الوصف",qty:8,sar:2473},
+  {r:"Changed Mind",ar:"غير رأيه",qty:7,sar:1503},
+];
+
+// Helpers
+const sar=(n,s=false)=>{if(n==null||isNaN(n))return"—";const abs=Math.abs(parseFloat(n)),sign=n<0?"-":"";if(s&&abs>=1000000)return sign+"SAR "+(abs/1000000).toFixed(2)+"M";if(s&&abs>=1000)return sign+"SAR "+(abs/1000).toFixed(1)+"K";return sign+"SAR "+abs.toLocaleString("en",{maximumFractionDigits:0});};
+const cvrC=v=>!v?"#444":v>=1.5?G.green:v>=1?G.gold:v>=0.5?G.orange:G.red;
+const retC=v=>!v?"#444":v<=5?G.green:v<=15?G.gold:v<=30?G.orange:G.red;
+const roasC=v=>v>=6?G.green:v>=4?G.gold:v>=2.5?G.orange:G.red;
+
+const Bar=({pct,color,h=6})=><div style={{height:h,background:"#21262d",borderRadius:h,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(Math.max(pct||0,0),100)}%`,background:color,borderRadius:h,transition:"width 0.5s"}}/></div>;
+const KpiCard=({icon,label,value,sub,color,small})=>(
+  <div style={{background:G.card,border:`1px solid ${color}33`,borderRadius:12,padding:"12px 14px",flex:1,minWidth:100,position:"relative",overflow:"hidden"}}>
+    <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${color},transparent)`}}/>
+    <div style={{fontSize:small?18:22,marginBottom:4}}>{icon}</div>
+    <div style={{fontSize:small?15:20,fontWeight:800,color,lineHeight:1,marginBottom:3}}>{value}</div>
+    <div style={{fontSize:10,color:G.muted,marginBottom:1}}>{label}</div>
+    {sub&&<div style={{fontSize:9,color:G.dim}}>{sub}</div>}
+  </div>
+);
+const Th=({children,color=G.muted,right=false})=><th style={{padding:"8px 10px",textAlign:right?"right":"center",color,fontSize:10,fontWeight:700,borderBottom:`1px solid ${G.border}`,background:G.row,whiteSpace:"nowrap"}}>{children}</th>;
+const Td=({children,style={}})=><td style={{padding:"9px 10px",textAlign:"center",borderBottom:`1px solid ${G.border}`,fontSize:12,...style}}>{children}</td>;
+const STitle=({en,ar,color=G.gold})=><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><div style={{width:3,height:14,background:color,borderRadius:2,flexShrink:0}}/><div style={{fontSize:11,fontWeight:700,color:"#9aa3b4",textTransform:"uppercase",letterSpacing:0.5}}>{en} / {ar}</div></div>;
+
+function WeekTable({weeks,yc,t}){
+  if(!weeks?.length)return null;
+  const maxR=Math.max(...weeks.map(w=>Math.abs(w.rev||0)),1);
+  const tot=weeks.reduce((a,w)=>a+(w.rev||0),0);
+  return(
+    <div style={{overflowX:"auto"}}>
+      <table style={{minWidth:680}}>
+        <thead><tr>
+          <Th right color={yc}>{t.wk}</Th>
+          <Th color={yc}>{t.revenue}</Th>
+          <Th>{t.orders}</Th><Th>AOV</Th>
+          <Th color={G.green}>CVR</Th><Th>{t.sessions}</Th>
+          <Th color={G.red}>Ret SAR</Th><Th color={G.green}>New</Th>
+        </tr></thead>
+        <tbody>
+          {weeks.map((w,wi)=>{
+            const isN=(w.rev||0)<0,isP=w.rev===Math.max(...weeks.map(x=>x.rev||0));
+            return(
+              <tr key={wi} style={{background:isN?"#3a1e1e22":isP?yc+"11":wi%2===0?G.card:G.row}}>
+                <td style={{padding:"8px 10px",borderBottom:`1px solid ${G.border}`,textAlign:"right"}}>
+                  <div style={{fontWeight:700,fontSize:11,color:isN?G.red:isP?yc:G.gold}}>{w.flag||""} {t.wk} {wi+1}</div>
+                  <div style={{fontSize:9,color:G.dim}}>{w.w}</div>
+                </td>
+                <Td><div style={{fontWeight:800,color:isN?G.red:isP?yc:"#e6edf3"}}>{sar(w.rev,true)}</div><Bar pct={Math.abs(w.rev||0)/maxR*100} color={isN?G.red:yc} h={3}/></Td>
+                <Td style={{fontWeight:600,color:"#e6edf3"}}>{w.orders||"—"}</Td>
+                <Td style={{color:G.muted,fontSize:11}}>{w.aov?"SAR "+w.aov:"—"}</Td>
+                <Td style={{fontWeight:800,color:cvrC(w.cvr)}}>{w.cvr?w.cvr.toFixed(2)+"%":"—"}</Td>
+                <Td style={{color:G.muted,fontSize:11}}>{w.sess?w.sess.toLocaleString():"—"}</Td>
+                <Td style={{fontWeight:700,color:(w.retSAR||0)>0?G.red:"#555"}}>{(w.retSAR||0)>0?sar(-w.retSAR,true):"—"}</Td>
+                <Td style={{fontWeight:600,color:(w.nc||0)>0?G.green:"#555"}}>{w.nc??"-"}</Td>
+              </tr>
+            );
+          })}
+          <tr style={{background:yc+"11",borderTop:`2px solid ${yc}44`}}>
+            <td style={{padding:"9px 10px",fontWeight:800,color:yc,textAlign:"right"}}>Total</td>
+            <Td style={{fontWeight:800,color:yc,fontSize:14}}>{sar(tot,true)}</Td>
+            <Td style={{fontWeight:800,color:yc}}>{weeks.reduce((a,w)=>a+(w.orders||0),0)}</Td>
+            <td colSpan={5}/>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ══ MAIN APP ══════════════════════════════════════════════════════
+function App(){
+  const [lang,setLang]   =useState(()=>S.get('lang','en'));
+  const [tab,setTab]     =useState(()=>S.get('tab','pip'));
+  const [year,setYear]   =useState("2026");
+  const [selM,setSelM]   =useState(null);
+  const [checks,setChecks]=useState(()=>S.get('checks',{}));
+  const [userWks,setUserWks]=useState(()=>S.get('userWks',{}));
+  const [userM,setUserM] =useState(()=>S.get('userM',{}));
+  const [pipActual,setPipActual]=useState(()=>S.get('pipActual',{}));
+  const [countdown,setCd]=useState({});
+  const t=T[lang],isAr=lang==="ar";
+
+  useEffect(()=>{S.set('lang',lang)},[lang]);
+  useEffect(()=>{S.set('tab',tab)},[tab]);
+
+  // live countdown
+  useEffect(()=>{
+    function tick(){
+      const now=new Date();
+      if(now<PIP_START){
+        const diff=PIP_START-now;
+        const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+        setCd({phase:"before",d,h,m,s});
+      } else if(now<=PIP_END){
+        const diff=PIP_END-now;
+        const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+        const elapsed=Math.floor((now-PIP_START)/86400000);
+        const pct=Math.min((elapsed/PIP_TOTAL)*100,100);
+        setCd({phase:"active",d,h,m,s,elapsed,pct});
+      } else {
+        setCd({phase:"ended"});
+      }
+    }
+    tick();
+    const id=setInterval(tick,1000);
+    return()=>clearInterval(id);
+  },[]);
+
+  const bumpSave=useCallback(()=>{S.set('lastSaved',new Date().toLocaleString());showToast(T[lang].saved)},[lang]);
+  const saveChecks=v=>{S.set('checks',v);setChecks(v)};
+  const saveUserWks=v=>{S.set('userWks',v);setUserWks(v)};
+  const saveUserM=v=>{S.set('userM',v);setUserM(v)};
+  const savePipActual=v=>{S.set('pipActual',v);setPipActual(v)};
+
+  const M26=[...M26_BASE].map(m=>{
+    const u=userM[m.m];
+    if(!u)return{...m,actual:!!m.locked};
+    const merged={...m,actual:true};
+    if(!m.locked){
+      if(u.rev)merged.rev=parseFloat(u.rev);
+      if(u.orders)merged.orders=parseInt(u.orders);
+      if(u.cvr)merged.cvr=parseFloat(u.cvr);
+      if(u.retRate)merged.retRate=parseFloat(u.retRate);
+      if(u.retSAR)merged.retSAR=parseFloat(u.retSAR);
+      if(u.sess)merged.sess=parseInt(u.sess);
+      if(u.nc)merged.nc=parseInt(u.nc);
+    }
+    return merged;
+  });
+
+  const months=year==="2025"?M25:M26;
+  const yc=year==="2025"?G.blue:G.gold;
+  const t25=M25.reduce((a,m)=>a+(m.rev>0?m.rev:0),0);
+  const t26=M26.filter(m=>m.actual).reduce((a,m)=>a+(m.rev||0),0);
+  const totalSpend=PAID.reduce((a,m)=>a+m.spend,0);
+  const totalValue=PAID.reduce((a,m)=>a+m.value,0);
+  const oROAS=totalValue/totalSpend;
+  const selMonth=selM!==null?months[selM]:null;
+  function getWks(mKey){return[...(WKS[mKey]||[]),...(userWks[mKey]||[])]}
+  const selWks=selMonth?getWks(selMonth.m+(year.slice(-2))):[];
+
+  const TAB_C={pip:G.gold,overview:G.blue,sales:G.gold,marketing:G.purple,returns:G.red,issues:G.orange,strategy:G.green,adddata:G.teal};
+
+  // ── PIP countdown tab ─────────────────────────────────────────
+  function PIPTab(){
+    const [editing,setEditing]=useState(false);
+    const [draft,setDraft]=useState({...pipActual});
+    function savePip(){savePipActual(draft);setEditing(false);bumpSave()}
+    const boxSt=(color)=>({background:color+"15",border:`1px solid ${color}44`,borderRadius:10,padding:"14px 16px",flex:1,minWidth:120,textAlign:"center"});
+
+    return(
+      <div>
+        {/* BIG COUNTDOWN */}
+        <div style={{background:`linear-gradient(135deg,${G.navy},#1a1a2e)`,border:`1px solid ${G.gold}44`,borderRadius:18,padding:"24px 20px",marginBottom:20,textAlign:"center"}}>
+          <div style={{fontSize:11,fontWeight:700,color:G.gold,letterSpacing:2,marginBottom:8,textTransform:"uppercase"}}>
+            {countdown.phase==="before"?"⏳ PIP Starts In / يبدأ الـ PIP بعد":countdown.phase==="ended"?"✅ PIP Ended / انتهى الـ PIP":"⏱ Time Remaining / الوقت المتبقي"}
+          </div>
+
+          {countdown.phase==="active"&&(
+            <>
+              <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:16,flexWrap:"wrap"}}>
+                {[{v:countdown.d,l:"Days / أيام"},{v:countdown.h,l:"Hours / ساعات"},{v:countdown.m,l:"Min / دقائق"},{v:countdown.s,l:"Sec / ثواني"}].map((x,i)=>(
+                  <div key={i} style={{background:"#0d1117",border:`1px solid ${G.gold}44`,borderRadius:12,padding:"12px 16px",minWidth:70}}>
+                    <div style={{fontSize:36,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums",letterSpacing:-1}}>{String(x.v).padStart(2,'0')}</div>
+                    <div style={{fontSize:9,color:G.muted,marginTop:2}}>{x.l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{marginBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:6}}>
+                  <span style={{color:G.muted}}>Day {countdown.elapsed} of {PIP_TOTAL}</span>
+                  <span style={{color:G.gold,fontWeight:700}}>{countdown.pct.toFixed(1)}% elapsed</span>
+                </div>
+                <div style={{height:10,background:"#21262d",borderRadius:10,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${countdown.pct}%`,background:`linear-gradient(90deg,${G.blue},${G.gold})`,borderRadius:10,transition:"width 1s"}}/>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:G.dim,marginTop:4}}>
+                  <span>Apr 27, 2026</span><span>Jul 25, 2026</span>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:16,justifyContent:"center",fontSize:10,color:G.muted}}>
+                <span>Phase 1: Wks 1–4 {countdown.elapsed<=28?"🔴 Active":"✅"}</span>
+                <span>Phase 2: Wks 5–8 {countdown.elapsed>28&&countdown.elapsed<=56?"🔴 Active":countdown.elapsed>56?"✅":"⏳"}</span>
+                <span>Phase 3: Wks 9–12 {countdown.elapsed>56?"🔴 Active":"⏳"}</span>
+              </div>
+            </>
+          )}
+          {countdown.phase==="before"&&(
+            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+              {[{v:countdown.d,l:"Days"},{v:countdown.h,l:"Hours"},{v:countdown.m,l:"Min"},{v:countdown.s,l:"Sec"}].map((x,i)=>(
+                <div key={i} style={{background:"#0d1117",border:`1px solid ${G.gold}44`,borderRadius:12,padding:"12px 16px",minWidth:70}}>
+                  <div style={{fontSize:32,fontWeight:900,color:G.gold}}>{String(x.v).padStart(2,'0')}</div>
+                  <div style={{fontSize:9,color:G.muted,marginTop:2}}>{x.l}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {countdown.phase==="ended"&&<div style={{fontSize:20,color:G.green,fontWeight:800}}>PIP period has ended — Present your results! 🏆</div>}
+        </div>
+
+        {/* PIP Targets */}
+        <div style={{background:G.card,border:`1px solid ${G.gold}33`,borderRadius:14,padding:16,marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <STitle en="PIP Targets" ar="أهداف الـ90 يوم" color={G.gold}/>
+            <button onClick={()=>setEditing(!editing)} style={{background:editing?G.teal+"22":"#21262d",border:`1px solid ${editing?G.teal:G.border}`,color:editing?G.teal:G.muted,borderRadius:8,padding:"5px 12px",fontSize:11}}>
+              {editing?"✓ Done":"✏️ Edit Actuals"}
+            </button>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {PIP_TARGETS.map((p,i)=>{
+              const actual=pipActual[p.k]||p.curr;
+              const draftVal=draft[p.k]||"";
+              const aNum=parseFloat(actual.replace(/[^0-9.]/g,""))||p.baseVal;
+              const pct=p.k==="ret"?Math.max(0,Math.min(100,(1-(aNum-p.goalVal)/(p.baseVal-p.goalVal))*100)):Math.min(100,(aNum/p.goalVal)*100);
+              const color=pct>=80?G.green:pct>=50?G.gold:G.red;
+              return(
+                <div key={i} style={{background:"#0d1117",borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#e6edf3"}}>{isAr?p.ar:p.en}</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <span style={{fontSize:10,color:G.dim}}>Target: <strong style={{color:G.green}}>{p.goal}</strong></span>
+                      {editing?(
+                        <input type="text" value={draftVal} onChange={e=>setDraft(d=>({...d,[p.k]:e.target.value}))}
+                          placeholder={p.curr} style={{width:80,background:"#161b22",border:`1px solid ${G.teal}`,borderRadius:6,color:G.teal,fontSize:12,padding:"3px 7px",textAlign:"center"}}/>
+                      ):(
+                        <span style={{fontSize:14,fontWeight:800,color}}>{actual}</span>
+                      )}
+                    </div>
+                  </div>
+                  <Bar pct={pct} color={color} h={8}/>
+                  <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
+                    <span style={{fontSize:9,color:G.dim}}>{pct.toFixed(0)}% of target</span>
+                    <span style={{fontSize:9,color:p.trend==="up"?G.green:p.trend==="down"?G.red:G.muted}}>{p.trend==="up"?"↑ Improving":p.trend==="down"?"↓ Declining":"→ Flat"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {editing&&(
+            <button onClick={savePip} style={{width:"100%",background:G.teal,color:"#0d1117",border:"none",borderRadius:10,padding:"10px",fontWeight:800,fontSize:13,marginTop:12,cursor:"pointer"}}>
+              💾 {t.save} PIP Actuals
+            </button>
+          )}
+        </div>
+
+        {/* Quick stats */}
+        <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+          <KpiCard icon="💰" label="Shopify 2025" value={sar(t25,true)} sub="Apr–Dec 2025" color={G.blue} small/>
+          <KpiCard icon="🟡" label="Shopify 2026 YTD" value={sar(t26,true)} sub="Jan–Apr 2026" color={G.gold} small/>
+          <KpiCard icon="📊" label="CVR Apr 2026" value="1.95%" sub="✅ Above 1.5% target" color={G.green} small/>
+          <KpiCard icon="📣" label="ROAS (overall)" value={oROAS.toFixed(2)+"x"} sub="Aug 25–Feb 26" color={roasC(oROAS)} small/>
+          <KpiCard icon="🔴" label="Returns 2025–26" value="SAR 260K" sub="1,298 units" color={G.red} small/>
+          <KpiCard icon="🏪" label="Mkt Share" value="10.2%" sub="Target 20%" color={G.orange} small/>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Overview ──────────────────────────────────────────────────
+  function OverviewTab(){
+    const maxR=Math.max(...M25.map(m=>Math.abs(m.rev)));
+    return(
+      <div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:18}}>
+          <KpiCard icon="💰" label="Shopify 2025" value={sar(t25,true)} sub={M25.reduce((a,m)=>a+m.orders,0).toLocaleString()+" orders"} color={G.blue}/>
+          <KpiCard icon="🟡" label="2026 YTD" value={sar(t26,true)} sub={M26.filter(m=>m.actual).reduce((a,m)=>a+(m.orders||0),0)+" orders"} color={G.gold}/>
+          <KpiCard icon="📊" label="CVR trend 2026" value="↑ 1.95%" sub="Apr: above target ✅" color={G.green}/>
+          <KpiCard icon="🔴" label="Returns total" value="SAR 260K" sub="2025–2026" color={G.red}/>
+          <KpiCard icon="📣" label="Ad ROAS" value={oROAS.toFixed(2)+"x"} sub={sar(totalSpend,true)+" spend"} color={roasC(oROAS)}/>
+          <KpiCard icon="🏪" label="Mkt Share" value="10.2%" sub="Target: 20%" color={G.orange}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:14,marginBottom:16}}>
+          <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,padding:16}}>
+            <STitle en="Monthly Revenue 2025" ar="الإيرادات الشهرية 2025"/>
+            <div style={{display:"flex",gap:5,alignItems:"flex-end",height:110}}>
+              {M25.map((m,i)=>{
+                const h=Math.max(Math.abs(m.rev)/maxR*100,2);
+                const isN=m.rev<0,isP=m.rev===Math.max(...M25.map(x=>x.rev));
+                return(
+                  <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                    <div style={{fontSize:7,color:isP?G.gold:isN?G.red:G.muted,fontWeight:isP?700:400}}>{sar(m.rev,true)}</div>
+                    <div onClick={()=>{setYear("2025");setSelM(i);setTab("sales")}} style={{width:"100%",height:`${h}%`,background:isN?G.red:isP?G.gold:G.blue+"88",borderRadius:"3px 3px 0 0",cursor:"pointer"}} onMouseEnter={e=>e.target.style.opacity="0.75"} onMouseLeave={e=>e.target.style.opacity="1"}/>
+                    <div style={{fontSize:8,color:G.dim}}>{m.m}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{fontSize:9,color:G.dim,textAlign:"center",marginTop:6}}>↑ Click bar → weekly detail</div>
+          </div>
+          <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,padding:16}}>
+            <STitle en="Channel Mix" ar="توزيع القنوات"/>
+            {[{n:"Shopify",v:"SAR 2.34M",c:G.blue,p:84},{n:"Noon",v:"SAR 300K",c:G.orange,p:11},{n:"Trendyol",v:"SAR 70K",c:G.purple,p:3},{n:"B2B",v:"SAR 70K",c:G.green,p:3},{n:"Amazon",v:"🔴 Not launched",c:G.red,p:0}].map((ch,i)=>(
+              <div key={i} style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+                  <span style={{fontWeight:700,color:"#e6edf3"}}>{ch.n}</span>
+                  <span style={{color:ch.c,fontWeight:700,fontSize:9}}>{ch.v}</span>
+                </div>
+                <Bar pct={ch.p} color={ch.c}/>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{background:G.card,border:`1px solid ${G.gold}33`,borderRadius:14,padding:16}}>
+          <STitle en="2026 vs 2025 (Jan–Apr)" ar="مقارنة يناير–أبريل"/>
+          {[{l:"Jan",v25:null,v26:98930},{l:"Feb",v25:null,v26:456789},{l:"Mar",v25:null,v26:194032},{l:"Apr",v25:1447,v26:181551}].map((r,i)=>{
+            const mx=Math.max(r.v25||0,r.v26,1);
+            const g=r.v25?(((r.v26-r.v25)/r.v25)*100):null;
+            return(
+              <div key={i} style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:4}}>
+                  <span style={{fontWeight:700,color:"#e6edf3"}}>{r.l}</span>
+                  <div style={{display:"flex",gap:10}}>
+                    <span style={{color:G.blue}}>{r.v25?sar(r.v25,true):"—"}</span>
+                    <span style={{color:G.gold,fontWeight:700}}>{sar(r.v26,true)}</span>
+                    {g!=null&&<span style={{color:g>0?G.green:G.red,fontWeight:700}}>{g>0?"+":""}{g.toFixed(1)}%</span>}
+                  </div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                  <Bar pct={r.v25?r.v25/mx*100:0} color={G.blue+"88"} h={6}/>
+                  <Bar pct={r.v26/mx*100} color={G.gold} h={6}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Sales ─────────────────────────────────────────────────────
+  function SalesTab(){
+    return(
+      <div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+          <div style={{display:"flex",background:G.row,borderRadius:10,padding:3,gap:2}}>
+            {["2025","2026"].map(y=>(
+              <button key={y} onClick={()=>{setYear(y);setSelM(null)}} style={{padding:"6px 16px",borderRadius:8,background:year===y?(y==="2025"?G.blue:G.gold):"transparent",color:year===y?"#fff":G.muted,fontWeight:year===y?700:400,fontSize:12}}>
+                {y}{y==="2026"&&<span style={{fontSize:9,marginLeft:2,opacity:0.8}}>live</span>}
+              </button>
+            ))}
+          </div>
+          <div style={{flex:1,display:"flex",gap:4,flexWrap:"wrap"}}>
+            {months.map((m,mi)=>{
+              const active=selM===mi,has=m.rev!=null;
+              return(
+                <button key={mi} onClick={()=>setSelM(active?null:mi)} style={{padding:"4px 9px",borderRadius:8,border:`1px solid ${active?yc:"#30363d"}`,background:active?yc+"22":"transparent",color:active?yc:has?"#e6edf3":"#444",fontWeight:active?700:400,fontSize:10,lineHeight:1.4,textAlign:"center"}}>
+                  {isAr?m.ar:m.m}
+                  {has&&<div style={{fontSize:8,color:m.rev<0?G.red:yc+"cc"}}>{sar(m.rev,true)}</div>}
+                  {!has&&<div style={{fontSize:8,color:"#2a3040"}}>{t.upcoming}</div>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {selMonth&&(
+          <div style={{background:G.card,border:`2px solid ${yc}44`,borderRadius:14,overflow:"hidden",marginBottom:14}}>
+            <div style={{background:year==="2025"?"#1a2a3e":"#1a1a2e",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <span style={{fontWeight:800,fontSize:15,color:yc}}>{isAr?selMonth.ar:selMonth.m} {year}</span>
+                {selMonth.rev!=null&&<span style={{fontSize:11,color:G.muted,marginLeft:10}}>{sar(selMonth.rev,true)} · {selMonth.orders?.toLocaleString()} orders{selMonth.cvr!=null&&<span style={{color:cvrC(selMonth.cvr)}}> · CVR {selMonth.cvr?.toFixed(2)}%</span>}</span>}
+              </div>
+              <button onClick={()=>setSelM(null)} style={{background:"transparent",border:"1px solid #30363d",borderRadius:6,color:G.muted,padding:"3px 8px",fontSize:11}}>{t.close}</button>
+            </div>
+            {selMonth.rev!=null?(
+              <>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:8,padding:"12px"}}>
+                  {[{l:t.revenue,v:sar(selMonth.rev,true),c:selMonth.rev<0?G.red:yc},{l:t.orders,v:(selMonth.orders||0).toLocaleString(),c:G.blue},{l:"AOV",v:selMonth.orders>0?"SAR "+(selMonth.rev/selMonth.orders).toFixed(0):"—",c:G.muted},{l:"CVR",v:selMonth.cvr?selMonth.cvr.toFixed(2)+"%":"—",c:cvrC(selMonth.cvr)},{l:t.sessions,v:selMonth.sess?(selMonth.sess/1000).toFixed(0)+"K":"—",c:G.purple},{l:"Ret SAR",v:selMonth.retSAR>0?sar(-selMonth.retSAR,true):"—",c:G.red},{l:"New",v:selMonth.nc!=null?String(selMonth.nc):"—",c:G.green}].map((x,i)=>(
+                    <div key={i} style={{background:"#0d1117",borderRadius:8,padding:"9px 11px"}}>
+                      <div style={{fontSize:9,color:G.dim,marginBottom:2}}>{x.l}</div>
+                      <div style={{fontSize:15,fontWeight:800,color:x.c}}>{x.v}</div>
+                    </div>
+                  ))}
+                </div>
+                {selWks.length>0&&<WeekTable weeks={selWks} yc={yc} t={t}/>}
+              </>
+            ):<div style={{padding:20,textAlign:"center",color:G.dim}}>🔜 {t.upcoming} — <button onClick={()=>setTab("adddata")} style={{color:G.teal,background:"transparent",textDecoration:"underline",fontSize:12,cursor:"pointer"}}>{isAr?"أضف بيانات":"Add data"}</button></div>}
+          </div>
+        )}
+        <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,overflow:"hidden",overflowX:"auto"}}>
+          <div style={{padding:"10px 16px",borderBottom:`1px solid ${G.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontWeight:700,color:yc,fontSize:13}}>{year==="2025"?"Shopify 2025":"Shopify 2026 — Live"}</span>
+            <span style={{fontSize:10,color:G.dim}}>Click month for weekly detail</span>
+          </div>
+          <table>
+            <thead><tr>
+              <Th right>{isAr?"الشهر":"Month"}</Th><Th color={yc}>{t.revenue}</Th><Th>{t.orders}</Th><Th>AOV</Th><Th color={G.green}>CVR</Th><Th>{t.sessions}</Th><Th color={G.red}>Ret%</Th><Th color={G.red}>Ret SAR</Th><Th color={G.green}>New</Th>
+            </tr></thead>
+            <tbody>
+              {months.map((m,mi)=>{
+                const isSel=selM===mi,has=m.rev!=null;
+                return(
+                  <tr key={mi} onClick={()=>setSelM(isSel?null:mi)} style={{background:isSel?yc+"11":"transparent",cursor:"pointer"}} onMouseEnter={e=>{if(!isSel)e.currentTarget.style.background=G.row}} onMouseLeave={e=>{if(!isSel)e.currentTarget.style.background=isSel?yc+"11":"transparent"}}>
+                    <td style={{padding:"10px 12px",borderBottom:`1px solid ${G.border}`,textAlign:"right"}}>
+                      <div style={{fontWeight:700,fontSize:13,color:isSel?yc:"#e6edf3"}}>{isAr?m.ar:m.m}</div>
+                    </td>
+                    <Td style={{fontWeight:800,fontSize:13,color:!has?"#2a3040":m.rev<0?G.red:yc}}>{has?sar(m.rev,true):<span style={{fontSize:10}}>{t.upcoming}</span>}</Td>
+                    <Td style={{fontWeight:600,color:has?"#e6edf3":"#333"}}>{has?m.orders:"—"}</Td>
+                    <Td style={{color:G.muted,fontSize:11}}>{has&&m.orders?"SAR "+(m.rev/m.orders).toFixed(0):"—"}</Td>
+                    <Td style={{fontWeight:800,color:cvrC(m.cvr)}}>{m.cvr!=null?m.cvr.toFixed(2)+"%":"—"}</Td>
+                    <Td style={{color:G.muted,fontSize:11}}>{m.sess?(m.sess/1000).toFixed(0)+"K":"—"}</Td>
+                    <Td style={{fontWeight:700,color:retC(m.retRate)}}>{m.retRate?m.retRate.toFixed(1)+"%":"—"}</Td>
+                    <Td style={{fontWeight:700,color:(m.retSAR||0)>0?G.red:"#333"}}>{(m.retSAR||0)>0?sar(-m.retSAR,true):"—"}</Td>
+                    <Td style={{fontWeight:600,color:(m.nc||0)>0?G.green:"#333"}}>{(m.nc||0)>0?m.nc:"—"}</Td>
+                  </tr>
+                );
+              })}
+              <tr style={{background:yc+"11",borderTop:`2px solid ${yc}44`}}>
+                <td style={{padding:"11px 12px",fontWeight:800,color:yc,textAlign:"right"}}>{year==="2025"?"Total 2025":"YTD 2026"}</td>
+                <td style={{padding:"11px",textAlign:"center",fontWeight:800,color:yc,fontSize:15}}>{year==="2025"?sar(t25,true):sar(t26,true)}</td>
+                <td style={{padding:"11px",textAlign:"center",fontWeight:800,color:yc}}>{year==="2025"?M25.reduce((a,m)=>a+m.orders,0):M26.filter(m=>m.actual).reduce((a,m)=>a+(m.orders||0),0)}</td>
+                <td colSpan={6}/>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Marketing ─────────────────────────────────────────────────
+  function MarketingTab(){
+    const mx1=Math.max(...PAID.map(m=>m.spend)),mx2=Math.max(...PAID.map(m=>m.value));
+    return(
+      <div>
+        <div style={{background:G.purple+"14",border:`1px solid ${G.purple}44`,borderRadius:12,padding:"12px 16px",marginBottom:14}}>
+          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+              <span style={{fontSize:20}}>📣</span>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:G.purple}}>Marketing Dept. / قسم التسويق</div>
+                <div style={{fontSize:10,color:G.dim}}>Aug 2025 – Feb 2026</div>
+              </div>
+            </div>
+            {[{l:"Spend",v:sar(totalSpend,true),c:G.purple},{l:"Revenue",v:sar(totalValue,true),c:G.green},{l:"ROAS",v:oROAS.toFixed(2)+"x",c:roasC(oROAS)}].map(x=>(
+              <div key={x.l} style={{textAlign:"center"}}>
+                <div style={{fontSize:18,fontWeight:800,color:x.c}}>{x.v}</div>
+                <div style={{fontSize:9,color:G.dim}}>{x.l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{background:G.card,border:`1px solid ${G.purple}33`,borderRadius:12,padding:14,marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:G.purple,marginBottom:10}}>🎯 PIP — ROAS target: 6.11x (Sep 25 baseline: 5.55x)</div>
+          {[{l:"Jan 2026",v:1.87},{l:"Feb 2026",v:3.39}].map(r=>(
+            <div key={r.l} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+                <span style={{fontWeight:700}}>{r.l}</span>
+                <span style={{color:roasC(r.v),fontWeight:700}}>{r.v.toFixed(2)}x {r.v>=6.11?"✅":"⚠️"}</span>
+              </div>
+              <Bar pct={r.v/6.11*100} color={roasC(r.v)} h={7}/>
+              <div style={{fontSize:9,color:G.dim,marginTop:2}}>{(r.v/6.11*100).toFixed(0)}% of 6.11x target</div>
+            </div>
+          ))}
+        </div>
+        <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,overflow:"hidden",overflowX:"auto",marginBottom:14}}>
+          <div style={{padding:"10px 16px",borderBottom:`1px solid ${G.border}`}}><span style={{fontWeight:700,color:G.purple,fontSize:13}}>Monthly Performance</span></div>
+          <table>
+            <thead><tr><Th right>Month</Th><Th color={G.purple}>Spend</Th><Th>Purchases</Th><Th color={G.green}>Revenue</Th><Th color={G.gold}>ROAS</Th><Th>CVR</Th><Th>Impr.</Th><Th>CPP</Th></tr></thead>
+            <tbody>
+              {PAID.map((m,i)=>{
+                const cpp=m.purchases>0?(m.spend/m.purchases):0;
+                return(
+                  <tr key={i} style={{background:m.roas>=5.5?G.green+"0a":m.roas<2.5?"#3a1e1e22":i%2===0?G.card:G.row}}>
+                    <td style={{padding:"10px 12px",fontWeight:700,fontSize:12,color:m.m.includes("26")?G.gold:G.blue,borderBottom:`1px solid ${G.border}`,textAlign:"right"}}>{isAr?m.ar:m.m}</td>
+                    <Td><div style={{fontWeight:800,color:G.purple}}>{sar(m.spend,true)}</div><Bar pct={m.spend/mx1*100} color={G.purple+"88"} h={3}/></Td>
+                    <Td style={{fontWeight:700}}>{m.purchases}</Td>
+                    <Td><div style={{fontWeight:800,color:G.green}}>{sar(m.value,true)}</div><Bar pct={m.value/mx2*100} color={G.green+"88"} h={3}/></Td>
+                    <Td style={{fontWeight:800,fontSize:15,color:roasC(m.roas)}}>{m.roas.toFixed(2)}x</Td>
+                    <Td style={{fontWeight:700,color:cvrC(m.cvr)}}>{m.cvr.toFixed(2)}%</Td>
+                    <Td style={{color:G.muted,fontSize:10}}>{(m.imp/1000000).toFixed(1)}M</Td>
+                    <Td style={{fontWeight:700,fontSize:11,color:cpp<60?G.green:cpp<120?G.gold:G.red}}>SAR {cpp.toFixed(0)}</Td>
+                  </tr>
+                );
+              })}
+              <tr style={{background:G.purple+"11",borderTop:`2px solid ${G.purple}44`}}>
+                <td style={{padding:"11px 12px",fontWeight:800,color:G.purple,textAlign:"right"}}>Total</td>
+                <Td style={{fontWeight:800,color:G.purple,fontSize:14}}>{sar(totalSpend,true)}</Td>
+                <Td style={{fontWeight:800,color:G.purple}}>{PAID.reduce((a,m)=>a+m.purchases,0)}</Td>
+                <Td style={{fontWeight:800,color:G.green,fontSize:14}}>{sar(totalValue,true)}</Td>
+                <Td style={{fontWeight:800,color:roasC(oROAS),fontSize:15}}>{oROAS.toFixed(2)}x</Td>
+                <td colSpan={2}/><Td style={{fontWeight:800,color:G.gold}}>SAR {(totalSpend/PAID.reduce((a,m)=>a+m.purchases,0)).toFixed(0)}</Td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,padding:16}}>
+          <STitle en="Spend vs Revenue" ar="الإنفاق مقابل العائد"/>
+          {PAID.map((m,i)=>{
+            const base=Math.max(mx1,mx2);
+            return(
+              <div key={i} style={{marginBottom:13}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:4}}>
+                  <span style={{fontWeight:700,color:m.m.includes("26")?G.gold:G.blue}}>{isAr?m.ar:m.m}</span>
+                  <div style={{display:"flex",gap:10}}>
+                    <span style={{color:G.purple}}>{sar(m.spend,true)}</span>
+                    <span style={{color:G.green}}>{sar(m.value,true)}</span>
+                    <span style={{color:roasC(m.roas),fontWeight:700}}>{m.roas.toFixed(2)}x</span>
+                  </div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                  <Bar pct={m.spend/base*100} color={G.purple} h={8}/>
+                  <Bar pct={m.value/base*100} color={m.roas>=5?G.green:m.roas>=3?G.gold:G.red} h={8}/>
+                </div>
+                <div style={{display:"flex",gap:8,fontSize:9,color:G.dim,marginTop:2}}>
+                  <span style={{color:G.purple+"88"}}>■ Spend</span><span style={{color:G.green+"88"}}>■ Revenue</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Returns ───────────────────────────────────────────────────
+  function ReturnsTab(){
+    const maxQ=Math.max(...RET_REASONS.map(r=>r.qty));
+    return(
+      <div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16}}>
+          {[{i:"📦",l:"Total Units",v:"1,298",c:G.red,s:"2025–Apr 2026"},{i:"💸",l:"Total Loss",v:"SAR 260K",c:G.red,s:"financial"},{i:"📐",l:"Size Issues",v:"204 units",c:G.orange,s:"15.7% · SAR 54K"},{i:"📅",l:"Worst Units",v:"Dec 25 — 327",c:G.red,s:"SAR 24.6K"},{i:"💥",l:"Worst SAR",v:"Jun 25 — 65K",c:G.red,s:"232 units"},{i:"📉",l:"2026 vs 2025",v:"-82.4%",c:G.green,s:"Improving ✅"}].map((c,i)=><KpiCard key={i} icon={c.i} label={c.l} value={c.v} sub={c.s} color={c.c} small/>)}
+        </div>
+        <div style={{background:"#2a1e0e",border:`1px solid ${G.orange}55`,borderRadius:12,padding:"12px 16px",marginBottom:14,display:"flex",gap:10}}>
+          <span style={{fontSize:20}}>📐</span>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:G.orange,marginBottom:4}}>⚠️ Size issues = 15.7% = SAR 54,306 avoidable / مشاكل المقاسات = SAR 54K خسارة قابلة للتفادي</div>
+            <div style={{fontSize:11,color:G.muted}}>💡 Fix: Visual size guide per product → saves SAR 40K+/year</div>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+          <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,padding:14}}>
+            <STitle en="Return Reasons" ar="أسباب الإرجاع" color={G.red}/>
+            {RET_REASONS.map((r,i)=>{
+              const isSz=r.r.includes("Small")||r.r.includes("Big");
+              return(
+                <div key={i} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3}}>
+                    <span style={{fontWeight:700,color:isSz?G.orange:"#e6edf3"}}>{isAr?r.ar:r.r}</span>
+                    <div style={{display:"flex",gap:8}}><span style={{color:G.red,fontWeight:700}}>{r.qty}</span><span style={{color:G.dim,fontSize:10}}>{sar(r.sar,true)}</span></div>
+                  </div>
+                  <Bar pct={r.qty/maxQ*100} color={isSz?G.orange:G.red+"88"} h={5}/>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,padding:14,overflowX:"auto"}}>
+            <STitle en="Monthly Trend" ar="الاتجاه الشهري" color={G.red}/>
+            <table>
+              <thead><tr><Th right>Month</Th><Th color={G.red}>Units</Th><Th color={G.red}>SAR</Th><Th>Rate</Th></tr></thead>
+              <tbody>
+                {[{m:"May 25",ar:"مايو 25",q:1,s:136,o:218},{m:"Jun 25",ar:"يونيو 25",q:232,s:65042,o:35},{m:"Jul 25",ar:"يوليو 25",q:107,s:29157,o:162},{m:"Aug 25",ar:"أغسطس 25",q:94,s:32127,o:108},{m:"Sep 25",ar:"سبتمبر 25",q:66,s:22603,o:178},{m:"Oct 25",ar:"أكتوبر 25",q:87,s:14174,o:210},{m:"Nov 25",ar:"نوفمبر 25",q:190,s:36875,o:188},{m:"Dec 25",ar:"ديسمبر 25",q:327,s:24567,o:141},{m:"Jan 26",ar:"يناير 26",q:66,s:11050,o:362},{m:"Feb 26",ar:"فبراير 26",q:38,s:4875,o:1180},{m:"Mar 26",ar:"مارس 26",q:58,s:8367,o:566},{m:"Apr 26",ar:"أبريل 26",q:32,s:1882,o:712}].map((m,i)=>{
+                  const r=m.o>0?(m.q/m.o*100):0;const i26=m.m.includes("26");const iW=m.q>=200||m.s>=60000;
+                  return(
+                    <tr key={i} style={{background:iW?"#3a1e1e":i26?G.green+"0a":i%2===0?G.card:G.row}}>
+                      <td style={{padding:"7px 10px",fontSize:11,fontWeight:700,color:i26?G.green:iW?G.red:"#e6edf3",borderBottom:`1px solid ${G.border}`,textAlign:"right"}}>{isAr?m.ar:m.m}</td>
+                      <Td style={{fontWeight:800,color:m.q>200?G.red:m.q>100?G.orange:G.muted,fontSize:13}}>{m.q}</Td>
+                      <Td style={{fontWeight:700,color:m.s>40000?G.red:m.s>15000?G.orange:G.muted,fontSize:11}}>{sar(m.s,true)}</Td>
+                      <Td style={{fontWeight:800,color:r>50?G.red:r>20?G.orange:r>10?G.gold:G.green,fontSize:11}}>{r.toFixed(0)}%</Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div style={{background:G.card,border:`1px solid ${G.green}33`,borderRadius:14,padding:14}}>
+          <STitle en="Recommendations" ar="التوصيات" color={G.green}/>
+          {[{i:"📐",c:G.orange,p:"P1",en:"Fix size chart — 204 units = SAR 54K avoidable",ar:"أصلح جدول المقاسات — 204 وحدة = SAR 54K"},{i:"🔄",c:G.blue,p:"P1",en:"Exchange policy — 1,298 returns = customers want alternatives",ar:"سياسة استبدال — العملاء يريدون بديلاً"},{i:"🔍",c:G.red,p:"P1",en:"Investigate باك تو باك (96) + ريمونتادا (64, SAR 0)",ar:"حقق في باك تو باك (96) + ريمونتادا (64)"},{i:"📦",c:G.orange,p:"P2",en:"Wrong item = 25 units = SAR 5.6K — barcode at packing",ar:"منتج خاطئ = 25 وحدة — باركود عند التعبئة"},{i:"📅",c:G.purple,p:"P2",en:"Dec 25 worst month — custom jersey = non-returnable policy",ar:"ديسمبر 25 الأسوأ — الجيرسي المخصص لا يُرد"}].map((r,i)=>(
+            <div key={i} style={{background:"#0d1117",border:`1px solid ${r.c}22`,borderRadius:9,padding:"11px 13px",marginBottom:8,borderLeft:`3px solid ${r.c}`}}>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:16}}>{r.i}</span>
+                <div>
+                  <span style={{fontSize:10,padding:"2px 7px",borderRadius:8,background:r.c+"22",color:r.c,fontWeight:700,marginBottom:4,display:"inline-block"}}>{r.p}</span>
+                  <div style={{fontSize:11,color:"#e6edf3",lineHeight:1.6,marginTop:3}}>{isAr?r.ar:r.en}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Issues ────────────────────────────────────────────────────
+  function IssuesTab(){
+    return(
+      <div>
+        <div style={{background:"#3a1e1e",border:`1px solid ${G.red}44`,borderRadius:12,padding:"12px 16px",marginBottom:14,display:"flex",gap:10,alignItems:"center"}}>
+          <span style={{fontSize:22}}>🚨</span>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:G.red}}>Critical Issues / مشاكل حرجة</div>
+            <div style={{fontSize:10,color:G.dim}}>Based on 2025–2026 data analysis</div>
+          </div>
+        </div>
+        {ISSUES.map((issue,i)=>(
+          <div key={i} style={{background:G.card,border:`1px solid ${issue.c}33`,borderRadius:13,padding:15,marginBottom:11,borderLeft:`4px solid ${issue.c}`}}>
+            <div style={{display:"flex",gap:9,alignItems:"flex-start"}}>
+              <span style={{fontSize:20,flexShrink:0}}>{issue.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",gap:7,alignItems:"center",marginBottom:6}}>
+                  <span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:issue.c+"22",color:issue.c,fontWeight:700}}>{issue.p}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"#e6edf3"}}>{isAr?issue.ar:issue.en}</span>
+                </div>
+                <div style={{fontSize:11,color:G.muted,background:"#0d1117",borderRadius:7,padding:"8px 11px",lineHeight:1.6}}>
+                  💡 <strong style={{color:"#c8d0dc"}}>Action: </strong>{isAr?issue.act_ar:issue.act_en}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // ── Strategy ──────────────────────────────────────────────────
+  function StrategyTab(){
+    const total=STRATEGY.flatMap(p=>p.items).length;
+    const done=STRATEGY.flatMap(p=>p.items).filter((_,i)=>checks[i]).length;
+    const toggle=(idx)=>{const n={...checks,[idx]:!checks[idx]};saveChecks(n);bumpSave()};
+    return(
+      <div>
+        <div style={{background:G.card,border:`1px solid ${G.gold}44`,borderRadius:14,padding:14,marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:800,color:G.gold,marginBottom:2}}>Growth Plan 2026 / خطة النمو</div>
+            <div style={{fontSize:10,color:G.dim}}>Click to mark done — auto-saved / اضغط لتعليم كمنجز</div>
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:24,fontWeight:800,color:G.green}}>{done}<span style={{fontSize:13,color:G.dim}}>/{total}</span></div>
+            <div style={{width:80}}><Bar pct={done/total*100} color={G.green} h={5}/></div>
+          </div>
+        </div>
+        {STRATEGY.map((phase,pi)=>{
+          const off=STRATEGY.slice(0,pi).reduce((a,p)=>a+p.items.length,0);
+          const pDone=phase.items.filter((_,i)=>checks[off+i]).length;
+          return(
+            <div key={pi} style={{background:G.card,border:`1px solid ${phase.color}33`,borderRadius:14,padding:14,marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:11}}>
+                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                  <div style={{width:3,height:20,background:phase.color,borderRadius:2}}/>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:13,color:phase.color}}>{phase.phase}</div>
+                    <div style={{fontSize:10,color:G.dim}}>{isAr?phase.period_ar:phase.period_en}</div>
+                  </div>
+                </div>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:phase.color}}>{pDone}/{phase.items.length}</div>
+                  <div style={{width:60}}><Bar pct={pDone/phase.items.length*100} color={phase.color}/></div>
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {phase.items.map((item,ii)=>{
+                  const gIdx=off+ii,done=checks[gIdx];
+                  return(
+                    <div key={ii} onClick={()=>toggle(gIdx)} style={{display:"flex",gap:9,alignItems:"flex-start",padding:"9px 12px",borderRadius:9,background:done?"#0d1117":G.row+"88",cursor:"pointer",border:`1px solid ${done?phase.color+"44":G.border}`,transition:"all 0.15s"}}>
+                      <div style={{width:19,height:19,borderRadius:5,border:`2px solid ${done?phase.color:"#444"}`,background:done?phase.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
+                        {done&&<span style={{fontSize:11,color:"#0d1117",fontWeight:800}}>✓</span>}
+                      </div>
+                      <span style={{fontSize:12,color:done?G.dim:"#e6edf3",textDecoration:done?"line-through":"none",lineHeight:1.6}}>{isAr?item.ar:item.en}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        <div style={{background:G.card,border:`1px solid ${G.blue}33`,borderRadius:14,overflow:"hidden"}}>
+          <div style={{padding:"11px 15px",borderBottom:`1px solid ${G.border}`,background:G.blue+"11"}}>
+            <div style={{fontSize:12,fontWeight:700,color:G.blue}}>Salla vs Shopify / مقارنة سلة مقابل شوبيفاي</div>
+            <div style={{fontSize:10,color:G.dim}}>Migrate after PIP ends / الهجرة بعد الـ90 يوم</div>
+          </div>
+          <div style={{overflowX:"auto"}}>
+            <table>
+              <thead><tr><Th right>Item</Th><Th color={G.blue}>Shopify</Th><Th color={G.green}>Salla</Th><Th>Winner</Th></tr></thead>
+              <tbody>
+                {[["Monthly Cost","SAR 1,500–3,000","SAR 400–900","Salla"],["Arabic Native","Via translation","Built-in","Salla"],["Local Payments","Via apps","Built-in","Salla"],["App Ecosystem","Massive (global)","Growing (KSA)","Shopify"],["SEO","Strong","Moderate","Shopify"],["Custom Dev","Requires dev","Easier","Salla"],["Migration Risk","—","3–6 weeks","Shopify"],["Annual Saving","—","SAR 13–25K/yr","Salla"]].map((r,i)=>(
+                  <tr key={i} style={{background:i%2===0?G.card:G.row}}>
+                    <td style={{padding:"8px 11px",fontSize:12,fontWeight:600,color:"#e6edf3",borderBottom:`1px solid ${G.border}`,textAlign:"right"}}>{r[0]}</td>
+                    <Td style={{color:r[3]==="Shopify"?G.green:G.muted,fontWeight:r[3]==="Shopify"?700:400}}>{r[1]}</Td>
+                    <Td style={{color:r[3]==="Salla"?G.green:G.muted,fontWeight:r[3]==="Salla"?700:400}}>{r[2]}</Td>
+                    <Td><span style={{fontSize:10,padding:"2px 7px",borderRadius:8,background:r[3]==="Salla"?G.green+"22":G.blue+"22",color:r[3]==="Salla"?G.green:G.blue,fontWeight:700}}>{r[3]} ✅</span></Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Add Data ──────────────────────────────────────────────────
+  function AddDataTab(){
+    const [wf,setWf]=useState({year:"2026",month:"May",key:"",rev:"",orders:"",cvr:"",retSAR:"",retRate:"",sess:"",nc:""});
+    const [mf,setMf]=useState({month:"May",rev:"",orders:"",cvr:"",retRate:"",retSAR:"",sess:"",nc:""});
+    const [mode,setMode]=useState("week");
+    const upW=(k,v)=>setWf(f=>({...f,[k]:v}));
+    const upM=(k,v)=>setMf(f=>({...f,[k]:v}));
+    const inpSt={width:"100%",background:"#0a0f18",border:"1px solid #30363d",borderRadius:7,color:"#e6edf3",fontSize:13,padding:"7px 10px",fontFamily:"inherit",outline:"none"};
+    const lbl=(txt)=><div style={{fontSize:10,color:G.muted,marginBottom:4,marginTop:8}}>{txt}</div>;
+
+    function saveWeek(){
+      if(!wf.rev||!wf.orders)return;
+      const mKey=wf.month+wf.year.slice(-2);
+      const entry={w:wf.key||`Week ${new Date().toLocaleDateString('en',{month:'short',day:'2-digit'})}`,rev:parseFloat(wf.rev)||0,orders:parseInt(wf.orders)||0,aov:wf.rev&&wf.orders?(parseFloat(wf.rev)/parseInt(wf.orders)).toFixed(0):0,cvr:parseFloat(wf.cvr)||null,retSAR:parseFloat(wf.retSAR)||0,retRate:parseFloat(wf.retRate)||null,sess:parseInt(wf.sess)||null,nc:parseInt(wf.nc)||null,userAdded:true};
+      const updated={...userWks,[mKey]:[...(userWks[mKey]||[]),entry]};
+      saveUserWks(updated);
+      if(wf.year==="2026"){
+        const old=userM[wf.month]||{};
+        const updM={...userM,[wf.month]:{...old,rev:(parseFloat(old.rev||0)+entry.rev).toFixed(0),orders:(parseInt(old.orders||0)+entry.orders).toString()}};
+        saveUserM(updM);
+      }
+      bumpSave();
+      showToast(t.weekAdded);
+      setWf(f=>({...f,key:"",rev:"",orders:"",cvr:"",retSAR:"",retRate:"",sess:"",nc:""}));
+    }
+
+    function saveMonth(){
+      if(!mf.rev&&!mf.orders)return;
+      const updated={...userM,[mf.month]:{rev:mf.rev,orders:mf.orders,cvr:mf.cvr,retRate:mf.retRate,retSAR:mf.retSAR,sess:mf.sess,nc:mf.nc}};
+      saveUserM(updated);
+      bumpSave();
+      showToast("Month saved ✓");
+    }
+
+    const months26=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const lockedM=["Jan","Feb","Mar","Apr"];
+
+    return(
+      <div>
+        <div style={{background:G.teal+"14",border:`1px solid ${G.teal}44`,borderRadius:12,padding:"12px 16px",marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:G.teal,marginBottom:4}}>➕ Add Data / إضافة بيانات</div>
+          <div style={{fontSize:11,color:G.muted}}>All data is saved automatically in your browser / يتحفظ تلقائياً في المتصفح</div>
+        </div>
+
+        <div style={{display:"flex",background:G.row,borderRadius:10,padding:3,gap:2,marginBottom:16,width:"fit-content"}}>
+          {[["week","Weekly / أسبوعي"],["month","Monthly / شهري"]].map(([k,l])=>(
+            <button key={k} onClick={()=>setMode(k)} style={{padding:"6px 16px",borderRadius:8,background:mode===k?G.teal:"transparent",color:mode===k?"#0d1117":G.muted,fontWeight:mode===k?700:400,fontSize:12}}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {mode==="week"&&(
+          <div style={{background:G.card,border:`1px solid ${G.teal}33`,borderRadius:14,padding:16}}>
+            <div style={{fontSize:13,fontWeight:700,color:G.teal,marginBottom:14}}>Add Weekly Entry / إضافة أسبوع</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div>
+                {lbl("Year / السنة")}
+                <select value={wf.year} onChange={e=>upW("year",e.target.value)} style={{...inpSt}}>
+                  <option>2025</option><option>2026</option>
+                </select>
+              </div>
+              <div>
+                {lbl("Month / الشهر")}
+                <select value={wf.month} onChange={e=>upW("month",e.target.value)} style={{...inpSt}}>
+                  {(wf.year==="2026"?months26:["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]).map(m=><option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                {lbl("Week Label (e.g. 28 Apr) / تسمية الأسبوع")}
+                <input value={wf.key} onChange={e=>upW("key",e.target.value)} placeholder="e.g. 28 Apr" style={inpSt}/>
+              </div>
+              <div>
+                {lbl(t.enter_rev)}
+                <input type="number" value={wf.rev} onChange={e=>upW("rev",e.target.value)} placeholder="0" style={inpSt}/>
+              </div>
+              <div>
+                {lbl(t.enter_ord)}
+                <input type="number" value={wf.orders} onChange={e=>upW("orders",e.target.value)} placeholder="0" style={inpSt}/>
+              </div>
+              <div>
+                {lbl(t.enter_cvr)}
+                <input type="number" step="0.01" value={wf.cvr} onChange={e=>upW("cvr",e.target.value)} placeholder="e.g. 1.50" style={inpSt}/>
+              </div>
+              <div>
+                {lbl(t.enter_sess)}
+                <input type="number" value={wf.sess} onChange={e=>upW("sess",e.target.value)} placeholder="0" style={inpSt}/>
+              </div>
+              <div>
+                {lbl(t.enter_retSAR)}
+                <input type="number" value={wf.retSAR} onChange={e=>upW("retSAR",e.target.value)} placeholder="0" style={inpSt}/>
+              </div>
+              <div>
+                {lbl(t.enter_retRate)}
+                <input type="number" step="0.1" value={wf.retRate} onChange={e=>upW("retRate",e.target.value)} placeholder="e.g. 3.5" style={inpSt}/>
+              </div>
+              <div>
+                {lbl(t.enter_nc)}
+                <input type="number" value={wf.nc} onChange={e=>upW("nc",e.target.value)} placeholder="0" style={inpSt}/>
+              </div>
+            </div>
+            <button onClick={saveWeek} style={{width:"100%",background:G.teal,color:"#0d1117",border:"none",borderRadius:10,padding:"11px",fontWeight:800,fontSize:13,marginTop:14,cursor:"pointer"}}>
+              💾 Save Week / حفظ الأسبوع
+            </button>
+          </div>
+        )}
+
+        {mode==="month"&&(
+          <div style={{background:G.card,border:`1px solid ${G.gold}33`,borderRadius:14,padding:16}}>
+            <div style={{fontSize:13,fontWeight:700,color:G.gold,marginBottom:14}}>Add Monthly Summary / إضافة ملخص شهري (2026)</div>
+            <div>
+              {lbl("Month / الشهر (2026)")}
+              <select value={mf.month} onChange={e=>upM("month",e.target.value)} style={{...inpSt}}>
+                {months26.filter(m=>!lockedM.includes(m)).map(m=><option key={m}>{m}</option>)}
+              </select>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:8}}>
+              {[[t.enter_rev,"rev"],[t.enter_ord,"orders"],["CVR %","cvr"],["Sessions","sess"],["Returns SAR","retSAR"],["Return Rate %","retRate"],["New Customers","nc"]].map(([l,k])=>(
+                <div key={k}>
+                  {lbl(l)}
+                  <input type="number" value={mf[k]} onChange={e=>upM(k,e.target.value)} placeholder="0" style={inpSt}/>
+                </div>
+              ))}
+            </div>
+            <button onClick={saveMonth} style={{width:"100%",background:G.gold,color:"#0d1117",border:"none",borderRadius:10,padding:"11px",fontWeight:800,fontSize:13,marginTop:14,cursor:"pointer"}}>
+              💾 Save Month / حفظ الشهر
+            </button>
+          </div>
+        )}
+
+        <div style={{background:G.card,border:"1px solid #21262d",borderRadius:14,padding:16,marginTop:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:G.muted,marginBottom:14}}>💾 Backup / نسخة احتياطية</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <button onClick={exportData} style={{flex:1,minWidth:140,background:G.green+"22",border:`1px solid ${G.green}44`,borderRadius:10,padding:"10px",color:G.green,fontWeight:700,fontSize:12,cursor:"pointer"}}>
+              ⬇️ {t.export}
+            </button>
+            <label style={{flex:1,minWidth:140,background:G.blue+"22",border:`1px solid ${G.blue}44`,borderRadius:10,padding:"10px",color:G.blue,fontWeight:700,fontSize:12,cursor:"pointer",textAlign:"center"}}>
+              ⬆️ {t.importBtn}
+              <input type="file" accept=".json" onChange={e=>importData(e.target.files[0])} style={{display:"none"}}/>
+            </label>
+          </div>
+          <div style={{marginTop:12,fontSize:10,color:G.dim}}>
+            ⚡ Your data is stored in this browser. Use Export to backup before clearing cache.
+            <br/>بياناتك محفوظة في هذا المتصفح. استخدم التصدير كنسخة احتياطية.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const VIEWS={pip:<PIPTab/>,overview:<OverviewTab/>,sales:<SalesTab/>,marketing:<MarketingTab/>,returns:<ReturnsTab/>,issues:<IssuesTab/>,strategy:<StrategyTab/>,adddata:<AddDataTab/>};
+
+  return(
+    <div style={{minHeight:"100vh",background:G.navy,color:"#e6edf3",direction:isAr?"rtl":"ltr"}}>
+      {/* HEADER */}
+      <div style={{background:G.card,borderBottom:`1px solid ${G.border}`,position:"sticky",top:0,zIndex:100}}>
+        <div style={{padding:"0 14px",display:"flex",alignItems:"center",height:52,gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+            <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${G.gold},#e8c86b)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>⚽</div>
+            <div>
+              <div style={{fontWeight:800,fontSize:13,color:G.gold,lineHeight:1}}>Al-Ittihad</div>
+              <div style={{fontSize:9,color:G.dim}}>E-Commerce</div>
+            </div>
+          </div>
+
+          {countdown.phase==="active"&&(
+            <div onClick={()=>setTab("pip")} style={{background:G.gold+"18",border:`1px solid ${G.gold}44`,borderRadius:8,padding:"4px 10px",cursor:"pointer",display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+              <span style={{fontSize:9,color:G.muted}}>PIP</span>
+              <span style={{fontSize:13,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums"}}>{String(countdown.d).padStart(2,'0')}d {String(countdown.h).padStart(2,'0')}h {String(countdown.m).padStart(2,'0')}m</span>
+            </div>
+          )}
+
+          <div className="tabs-scroll" style={{flex:1,display:"flex",gap:2,minWidth:0}}>
+            {t.tabs.map((label,i)=>{
+              const key=t.tabKeys[i],active=tab===key,c=TAB_C[key];
+              return(
+                <button key={key} onClick={()=>setTab(key)} style={{padding:"5px 9px",borderRadius:8,background:active?c+"22":"transparent",color:active?c:G.muted,fontWeight:active?700:400,fontSize:10,border:active?`1px solid ${c}44`:"1px solid transparent",whiteSpace:"nowrap",flexShrink:0}}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{display:"flex",background:"#0d1117",borderRadius:8,padding:2,gap:1,flexShrink:0}}>
+            {["en","ar"].map(l=>(
+              <button key={l} onClick={()=>setLang(l)} style={{padding:"4px 9px",borderRadius:6,background:lang===l?G.gold:"transparent",color:lang===l?"#0d1117":G.muted,fontWeight:lang===l?800:400,fontSize:11,border:"none",cursor:"pointer"}}>
+                {l==="en"?"EN":"عر"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Status strip */}
+        <div style={{padding:"4px 14px",borderTop:`1px solid ${G.border}`,display:"flex",gap:14,flexWrap:"wrap",background:"#0d111788"}}>
+          {[{l:"2025",v:sar(t25,true),c:G.blue},{l:"2026 YTD",v:sar(t26,true),c:G.gold},{l:"CVR",v:"1.95% Apr ✅",c:G.green},{l:"ROAS",v:oROAS.toFixed(2)+"x",c:roasC(oROAS)},{l:"Returns",v:"SAR 260K",c:G.red},{l:"Mkt",v:"10.2%/20%",c:G.orange}].map(x=>(
+            <div key={x.l} style={{display:"flex",gap:4,alignItems:"center",fontSize:10}}>
+              <span style={{color:G.dim}}>{x.l}:</span>
+              <strong style={{color:x.c}}>{x.v}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"16px 14px",maxWidth:1300,margin:"0 auto"}}>
+        {VIEWS[tab]}
+      </div>
+
+      <div style={{textAlign:"center",padding:"14px 0",marginTop:4,fontSize:9,color:"#2a3040"}}>
+        {t.by} · Al-Ittihad Club Company (PIF) · {countdown.phase==="active"?`Day ${countdown.elapsed} of ${PIP_TOTAL}`:""}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
